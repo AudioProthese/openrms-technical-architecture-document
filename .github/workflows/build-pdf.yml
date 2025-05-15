@@ -17,8 +17,8 @@ jobs:
         run: |
           mkdir -p .pandoc/templates
           wget https://github.com/Wandmalfarbe/pandoc-latex-template/releases/download/v3.2.0/Eisvogel-3.2.0.tar.gz
-          tar -xzf Eisvogel-2.3.0.tar.gz -C .pandoc/templates
-          rm Eisvogel-2.3.0.tar.gz
+          tar -xzf Eisvogel-3.2.0.tar.gz -C .pandoc/templates
+          rm Eisvogel-3.2.0.tar.gz
 
       - name: Generate PDF
         uses: docker://pandoc/latex:3.1.1
