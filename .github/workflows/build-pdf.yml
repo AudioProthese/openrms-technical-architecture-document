@@ -1,0 +1,37 @@
+name: Build Technical Architecture Document
+
+on:
+  push:
+    paths:
+      - 'TAD.md'
+  workflow_dispatch:
+
+jobs:
+  build-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Eisvogel template
+        run: |
+          mkdir -p .pandoc/templates
+          wget https://github.com/Wandmalfarbe/pandoc-latex-template/releases/download/v2.3.0/Eisvogel-3.2.0.tar.gz
+          tar -xzf Eisvogel-2.3.0.tar.gz -C .pandoc/templates
+          rm Eisvogel-2.3.0.tar.gz
+
+      - name: Generate PDF
+        uses: docker://pandoc/latex:3.1.1
+        with:
+          args: >
+            TAD.md -o TAD.pdf
+            --template=eisvogel
+            --pdf-engine=xelatex
+            --listings
+            --number-sections
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Technical-Architecture-Document
+          path: TAD.pdf
