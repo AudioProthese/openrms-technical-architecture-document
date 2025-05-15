@@ -21,11 +21,11 @@ jobs:
           rm Eisvogel-3.2.0.tar.gz
       
       - name: Generate PDF
-        uses: docker://pandoc/latex:3.1.1
+        uses: docker://pandoc/extra:3.7
         with:
           args: >
             TAD.md -o TAD.pdf
-            --template=templates/eisvogel.latex
+            --template=eisvogel
             --pdf-engine=xelatex
             --listings
             --number-sections
