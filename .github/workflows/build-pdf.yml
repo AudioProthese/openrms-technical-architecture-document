@@ -15,20 +15,21 @@ jobs:
 
       - name: Setup Eisvogel template
         run: |
-          mkdir -p .pandoc/templates
+          mkdir -p templates
           wget https://github.com/Wandmalfarbe/pandoc-latex-template/releases/download/v3.2.0/Eisvogel-3.2.0.tar.gz
-          tar -xzf Eisvogel-3.2.0.tar.gz -C .pandoc/templates
+          tar -xzf Eisvogel-3.2.0.tar.gz -C templates --strip-components=1 Eisvogel-3.2.0/eisvogel.latex
           rm Eisvogel-3.2.0.tar.gz
-
+      
       - name: Generate PDF
         uses: docker://pandoc/latex:3.1.1
         with:
           args: >
             TAD.md -o TAD.pdf
-            --template=eisvogel
+            --template=templates/eisvogel.latex
             --pdf-engine=xelatex
             --listings
             --number-sections
+      
 
       - name: Upload PDF artifact
         uses: actions/upload-artifact@v4
