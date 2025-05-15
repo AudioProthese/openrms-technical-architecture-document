@@ -12,13 +12,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Eisvogel template
-        run: |
-          mkdir -p templates
-          wget https://github.com/Wandmalfarbe/pandoc-latex-template/releases/download/v3.2.0/Eisvogel-3.2.0.tar.gz
-          tar -xzf Eisvogel-3.2.0.tar.gz -C templates --strip-components=1 Eisvogel-3.2.0/eisvogel.latex
-          rm Eisvogel-3.2.0.tar.gz
       
       - name: Generate PDF
         uses: docker://pandoc/extra:3.7
