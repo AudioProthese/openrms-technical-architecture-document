@@ -95,3 +95,17 @@ L’industrialisation de la plateforme repose sur plusieurs outils et pratiques 
 
 # Architecture technique
 
+Cette section présente sous forme schématique l’architecture technique de la plateforme AudioProthèse+. Elle illustre les différents composants de l’infrastructure, leurs interactions et les flux de données entre eux.
+
+## Diagramme d'architecture globale (Azure/Kubernetes)
+
+![Diagramme d'architecture globale AKS](./imgs/k8s-scheme.png)
+
+![Namespaces Kubernetes](./imgs/k8s-namespace.png)
+
+## Diagramme d'architecture CI/CD (plateforme de delivery)
+
+![Diagramme d'architecture CI/CD](./imgs/cicd-delivery.png)
+
+## Oath2 et solution zero-trust
+
