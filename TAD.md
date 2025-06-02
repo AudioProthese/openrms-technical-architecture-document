@@ -44,6 +44,8 @@ Ce document couvre l’ensemble des aspects techniques de la plateforme, notamme
 - Les principes de sécurité et de haute disponibilité
 - Les stratégies de déploiement et de supervision
 
+Il ne s'agira pas ici de détailler les aspects fonctionnels de la plateforme, qui sont eux détaillés dans un [wiki dédié](https://audioprothese.github.io/openmrs-architecture-documentation/). Ce document se concentre sur l'architecture technique et les choix technologiques qui sous-tendent la mise en œuvre de la plateforme AudioProthèse+.
+
 ## Public visé
 
 Ce document s’adresse aux :
@@ -53,6 +55,44 @@ Ce document s’adresse aux :
 - Ingénieurs DevOps
 - Administrateurs système
 - Responsables de la sécurité informatique
+
+## Répartition des rôles et responsabilités
+
+**Matteo ZINUTTI**  
+*Rôle : Ingénieur DevOps*  
+Responsabilités :  
+
+- Mise en œuvre des stacks d'observabilité Open-Source (Grafana, Prometheus, Loki)  
+- Synchronisation des secrets Azure
+
+---
+
+**Fabien CHEVALIER**  
+*Rôle : Ingénieur DevOps*  
+Responsabilités :  
+
+- Mise en place de l'industrialisation de la plateforme (Terraform, Helm, ArgoCD)  
+- Gestion des déploiements CI/CD  
+- Mise en place de la documentation as code
+
+---
+
+**Hakim AFARMACH**  
+*Rôle : Ingénieur DevOps*  
+Responsabilités :  
+
+- Mise en place des solutions de sécurité (Oath2, Zero-trust)  
+- Mise en place des configurations Kubernetes
+
+---
+
+### Méthodologie de travail
+
+Mise en place de feature branches pour chaque fonctionnalité ou correctif, avec des pull requests pour la revue de code. Organisation de sprints de développement de deux semaines, avec des réunions quotidiennes pour le suivi de l'avancement et la résolution des blocages. Utilisation d'outils de gestion de projet inclus à GitHub pour le suivi des tâches et des bugs.
+
+Le plateforme à été développée en collaboration constante, avec une spécialité pour chaque membre de l'équipe. Les rôles ont été répartis en fonction des compétences et des intérêts de chacun, et sont détaillés ci-dessus.
+
+Un soin important à été apporté à la documentation, tant au niveau du code source (commentaires, README) qu'au niveau de la documentation technique (ce document). La documentation est considérée comme un élément essentiel pour assurer la maintenabilité et la compréhension de l'architecture par les futurs intervenants. Il a d'ailleurs été décidé de mettre en place une documentation as code, permettant de versionner la documentation avec le code source et de la maintenir à jour de manière cohérente. Cette documentation est hébergée sur GitHub et accessible aux membres de l'équipe ainsi qu'aux parties prenantes du projet.
 
 ## Présentation des outils et solutions techniques
 
@@ -101,11 +141,81 @@ Cette section présente sous forme schématique l’architecture technique de la
 
 ![Diagramme d'architecture globale AKS](./imgs/k8s-scheme.png)
 
+### Répartition des namespaces
+
 ![Namespaces Kubernetes](./imgs/k8s-namespace.png)
 
-## Diagramme d'architecture CI/CD (plateforme de delivery)
+La répartition des namespaces Kubernetes est organisée de manière à isoler les différents environnements et services de la plateforme. Chaque namespace correspond à un environnement spécifique (développement, test, production) ou à un service particulier (frontend, backend, gateway). Dans notre cas, nous avons organisé les namespaces par service, l'environnement de production étant hébergé sur un cluster AKS dédié. Les namespaces sont les suivants :
 
-![Diagramme d'architecture CI/CD](./imgs/cicd-delivery.png)
+- **monitoring** : pour les services de supervision (Prometheus, Grafana)
+- **loki** : pour le service de collecte et d'analyse des logs (Loki)
+- **alloy** : pour le service Alloy, permettant de scrapper les métriques OpenMRS
+- **openmrs** : pour les services OpenMRS (frontend, backend, gateway)
+- **external-secret-operator** : pour le service de synchronisation des secrets Azure
+- **argocd** : pour le service de gestion des déploiements (ArgoCD)
+- **app-rooting-system** : pour le service de routage des applications (gateway)
+- **cert-manager** : pour la gestion des certificats SSL/TLS
 
-## Oath2 et solution zero-trust
+Cette répartition est identique sur tous les environnements (dev, prod).
 
+### Architecture des microservices
+
+L'application OpenRMS consiste en plusieurs microservices :
+
+- **OpenMRS Frontend** : l'interface utilisateur de l'application
+- **OpenMRS Backend** : le service backend qui gère la logique métier et les interactions avec la base de données.
+- **OpenMRS Gateway** : le service de routage qui permet de diriger les requêtes vers les différents microservices en fonction des routes définies.
+- **MariaDB** : la base de données relationnelle utilisée par OpenMRS pour stocker les données des patients et des services.
+
+La communication entre les microservices se fait via des API REST, et chaque service est déployé dans son propre pod Kubernetes. Les services sont configurés pour être accessibles via des Ingress, permettant de gérer les routes et les certificats SSL/TLS.
+
+#### App Routing System
+
+Côté AKS, le load-balancer frontal est configuré pour diriger le trafic vers l'`app-routing-system`, qui est le point d'entrée principal de l'application. `App Routing System` est un service offert par Azure permettant de synchroniser Azure DNS avec les Ingress Kubernetes. Il s'agit d'un proxy `NGINX` managé par Azure.
+
+#### Oath2 Proxy et Zero Trust
+
+![Oath2 Proxy](./imgs/oath2-zero-trust.png)
+
+Prometheus, Alloy et Grafana sont situés derrière un proxy Oath2, qui permet de sécuriser l'accès à ces services en exigeant une authentification via Oath2. La source de vérité pour les utilisateurs est l'annuaire Entra ID, permettant donc aux différents acteurs de se connecter via leurs identifiants Azure pour accéder aux services de supervision et de monitoring.
+
+#### External Secret Operator
+
+External Secret Operator est utilisé pour synchroniser les secrets Azure avec Kubernetes. Il permet de gérer les secrets de manière sécurisée et centralisée, en les stockant dans Azure Key Vault et en les synchronisant automatiquement avec les secrets Kubernetes. Cela permet de garantir que les secrets sont toujours à jour et accessibles aux services qui en ont besoin.
+
+![External Secret Operator](./imgs/external-secret-operator.png)
+
+#### Stack d'observabilité
+
+La stack d'observabilité est composée de plusieurs outils open source permettant de collecter, stocker et visualiser les métriques et les logs des applications et de l'infrastructure. Elle comprend :
+
+- **Prometheus** : pour la collecte des métriques des applications et de l'infrastructure.
+- **Grafana** : pour la visualisation des métriques collectées par Prometheus.
+- **Loki** : pour la collecte et l'analyse des logs des applications et de l'infrastructure.
+- **Alloy** : pour le scrapping des métriques OpenMRS et leur exposition à Prometheus.
+
+**Insérer capture d'écran des dashboards Grafana ici.**
+
+## Configuration Azure Cloud
+
+La sécurité étant un enjeu majeur pour AudioProthèse+, l'architecture Azure est configurée pour garantir un niveau de sécurité élevé. Voici les principales configurations mises en place.
+
+### OIDC pour les pipelines GitHub Actions
+
+![OIDC GitHub Actions](./imgs/oidc-azure.png)
+
+Pour sécuriser les pipelines GitHub Actions, nous avons configuré l'authentification OIDC (OpenID Connect) avec Azure Active Directory. Cela permet aux workflows GitHub Actions de s'authentifier auprès d'Azure sans avoir à gérer des secrets ou des clés d'accès.
+
+Ce système d'authentification permet de garantir que seuls les workflows autorisés peuvent accéder aux ressources Azure, renforçant ainsi la sécurité des déploiements.
+
+### Sécurisation des dépôts GitHub infrastructure
+
+Des règles de sécurité sont appliquées aux dépôts GitHub contenant les fichiers de configuration Terraform et Helm. Ces règles incluent :
+
+- L'utilisation de branches protégées pour les modifications de code
+- L'exigence de revues de code avant la fusion des pull requests
+- L'activation de l'analyse statique du code avec Trivia au sein des workflows GitHub Actions
+
+### Gestion de l'état des ressources Azure
+
+Le `tfstate` (état des ressources Terraform) est stocké dans un `Azure Storage Account` sécurisé. Cela permet de garantir la cohérence de l'état des ressources et d'éviter les conflits lors des déploiements. Sa mise en place est scriptée au sein d'un fichier `init.sh`, permettant la reproduction de l'environnement de manière automatisée.
