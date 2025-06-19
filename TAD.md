@@ -240,6 +240,238 @@ Les dashboards Grafana sont configurés pour afficher les métriques collectées
 
 Les modifications d'infrastructure doivent faire l'objet d'une revue de code, prenant la forme d'une `pull request` sur le dépôt GitHub. Cette `pull request` déclenche un `plan` Terraform, permettant de visualiser les modifications apportées à l'infrastructure avant leur application. Une fois validée, la `pull request` est fusionnée et le `apply` Terraform est exécuté pour appliquer les modifications.
 
+## Étude comparative des solutions
+
+Cette section présente une étude comparative des différentes solutions et outils envisagés pour la mise en place de la plateforme AudioProthèse+. Elle permet de justifier les choix technologiques retenus et d'expliquer pourquoi certaines solutions ont été écartées. Les sections suivantes détailleront les solutions sélectionnées, en les comparant à leur concurrence.
+
+Le choix des solutions a été motivé par plusieurs critères :
+
+- Dans la mesure du possible, l'utilisation de solutions open source
+- La compatibilité avec l'applicatif OpenMRS
+- Le budget de mise en oeuvre et de maintenance
+- Possibilité d'automatiser le déploiement et la configuration (Infrastructure as Code)
+
+### Choix du cloud provider
+
+#### Google Cloud (GCP)
+
+- Forces : IA/ML avancé, simplicité d’utilisation.
+- Faiblesses : Moins répandu, moins de services que les concurrents.
+
+#### Microsoft Azure
+
+- Forces : Bonne intégration avec l’écosystème Microsoft (Entra ID), OIDC et Workload Identity, services managés pour Kubernetes (AKS), large choix de services cloud.
+- Faiblesses : Plateforme complexe, gestion des coûts parfois difficile.
+
+#### Amazon Web Services (AWS)
+
+- Forces : Plus grand choix de services, leader du marché.
+- Faiblesses : Plateforme complexe, tarification difficile à anticiper.
+
+#### Choix pour le projet
+
+L'intégration d'Azure aux outils bureautique Microsoft (Entra ID, Azure DevOps) et la possibilité d'utiliser OIDC et Workload Identity pour sécuriser les pipelines GitHub Actions ont été des facteurs déterminants dans le choix d'Azure comme cloud provider pour la plateforme AudioProthèse+. De plus, l'équipe en place possède une expérience significative avec Azure, ce qui facilite la mise en œuvre et la gestion de l'infrastructure.
+
+### Choix de l'orchestrateur de conteneurs
+
+#### Azure Container Apps
+
+- Forces : Service managé, facile à utiliser, bon pour les applications serverless.
+- Faiblesses : Moins de contrôle sur l'infrastructure, fonctionnalités limitées par rapport à Kubernetes.
+
+#### Azure Kubernetes Service (AKS)
+
+- Forces : Orchestrateur de conteneurs complet, supporte les applications complexes, offre des fonctionnalités avancées (scalabilité, résilience, sécurité).
+- Faiblesses : Plus complexe à configurer et à gérer, nécessite une expertise en Kubernetes.
+
+#### Choix pour le projet
+
+Le choix d'Azure Kubernetes Service (AKS) s'est imposé car l'application OpenMRS s'est révélée incompatible avec Azure Container Apps. De plus, Kubernetes offre une flexibilité et une scalabilité supérieures, permettant de gérer efficacement les microservices de l'application. AKS est également un service managé, ce qui réduit la charge opérationnelle liée à la gestion de l'infrastructure sous-jacente.
+
+### Choix de la solution de CI/CD
+
+#### GitHub Actions
+
+- Forces : Intégration native avec GitHub, facile à configurer, supporte les workflows complexes.
+- Faiblesses : Limité aux dépôts GitHub, peut devenir coûteux pour les grandes équipes.
+
+#### GitLab CI/CD
+
+- Forces : Intégration complète avec GitLab, supporte les pipelines complexes, offre des fonctionnalités avancées de gestion de projet.
+- Faiblesses : Nécessite un hébergement GitLab, moins populaire que GitHub.
+
+#### Azure DevOps
+
+- Forces : Intégration avec l'écosystème Microsoft, notre architecture étant hébergée par Azure
+- Faiblesses : Plus complexe à configurer, moins flexible que GitHub Actions pour les workflows.
+
+#### Jenkins
+
+- Forces : Très flexible, open-source, supporte de nombreux plugins.
+- Faiblesses : Nécessite une gestion et une maintenance importantes, configuration complexe.
+
+#### Choix pour le projet
+
+Le choix de GitHub Actions s'est imposé car il est déjà utilisé pour la gestion du code source et des workflows de l'application OpenMRS. Il permet d'automatiser facilement les processus de CI/CD, avec une intégration native dans GitHub. De plus, GitHub Actions offre une grande flexibilité pour définir des workflows complexes et peut être facilement étendu avec des actions personnalisées.
+
+### Choix de la solution de gestion de l'infrastructure
+
+#### Terraform
+
+- Forces : Infrastructure as Code (IaC), supporte de nombreux providers cloud, permet de gérer l'état des ressources.
+- Faiblesses : Nécessite une bonne compréhension de la syntaxe HCL, peut devenir complexe pour les grandes infrastructures.
+
+#### Azure Resource Manager (ARM) Templates
+
+- Forces : Intégration native avec Azure, permet de gérer les ressources Azure de manière déclarative.
+- Faiblesses : Moins flexible que Terraform, syntaxe complexe, moins de support pour les providers tiers.
+
+#### Choix pour le projet
+
+Le choix de Terraform s'est imposé car il permet de gérer l'infrastructure en tant que code (IaC) de manière flexible et extensible. Il offre un support pour de nombreux providers cloud, y compris Azure, et permet de gérer l'état des ressources de manière centralisée. De plus, Terraform est largement adopté dans la communauté DevOps, ce qui facilite la collaboration et le partage des connaissances.
+
+### Choix de la solution de supervision et d'observabilité
+
+#### SignalFx (Splunk Observability)
+
+- Forces : Solution complète de supervision et d'observabilité, supporte les métriques, les logs et les traces.
+- Faiblesses : Coût élevé, dépendance à un fournisseur tiers.
+
+#### Prometheus + Grafana + Loki
+
+- Forces : Open source, flexible, supporte les métriques et les logs, large communauté, intégration facile avec Kubernetes.
+- Faiblesses : Nécessite une configuration et une maintenance, peut devenir complexe pour les grandes infrastructures.
+
+#### Choix pour le projet
+
+Le choix de la stack Prometheus + Grafana + Loki s'est imposé car elle est open source, flexible et largement adoptée dans la communauté Kubernetes. Elle permet de collecter, stocker et visualiser les métriques et les logs des applications et de l'infrastructure de manière efficace. De plus, cette stack est bien intégrée avec Kubernetes, ce qui facilite la configuration et la gestion des services déployés.
+
+### Choix de la solution de gestion des secrets
+
+#### Azure Key Vault
+
+- Forces : Service managé, sécurisé, intégré à l'écosystème Azure, supporte les secrets, les clés et les certificats.
+- Faiblesses : Difficile à intégrer sur Kubernetes sans outils tiers, coût potentiellement élevé en fonction de l'utilisation.
+
+#### HashiCorp Vault
+
+- Forces : Open source, flexible, supporte de nombreux providers cloud, permet de gérer les secrets de manière sécurisée.
+- Faiblesses : Nécessite une gestion et une maintenance importantes, configuration complexe.
+
+#### Choix pour le projet
+
+Malgré qu'il ne soit pas open source, Azure KeyVault reste la solution la plus simple pour gérer les secrets de manière sécurisée dans l'écosystème Azure. Il permet de stocker les secrets, les clés et les certificats de manière centralisée et sécurisée, tout en étant intégré à l'écosystème Azure. De plus, Azure Key Vault est compatible avec External Secret Operator, ce qui permet de synchroniser les secrets avec Kubernetes de manière transparente.
+
+### Choix de la solution de gestion des certificats
+
+#### Cert-Manager
+
+- Forces : Open source, intégré à Kubernetes, permet de gérer les certificats SSL/TLS de manière automatisée.
+- Faiblesses : Nécessite une configuration et une maintenance, peut devenir complexe pour les grandes infrastructures.
+
+#### Azure Key Vault
+
+- Forces : Service managé, sécurisé, intégré à l'écosystème Azure, permet de gérer les certificats SSL/TLS.
+- Faiblesses : Difficile à intégrer sur Kubernetes sans outils tiers, coût potentiellement élevé en fonction de l'utilisation.
+
+#### Choix pour le projet
+
+Le choix de Cert-Manager s'est imposé car il est spécifiquement conçu pour gérer les certificats SSL/TLS dans un environnement Kubernetes. Il permet de générer, renouveler et gérer les certificats de manière automatisée, tout en étant intégré à l'écosystème Kubernetes. De plus, Cert-Manager peut être configuré pour utiliser Azure Key Vault comme source de certificats, offrant ainsi une solution complète et sécurisée pour la gestion des certificats.
+
+# Estimation des coûts
+
+Cette section présente une estimation des coûts associés à la mise en place et à l'exploitation de la plateforme AudioProthèse+. Elle inclut les coûts liés aux services Azure, aux outils DevOps et au coût de la main-d'œuvre pour la mise en œuvre et la maintenance de l'infrastructure.
+
+## Estimation des coûts Azure par service
+
+| Service Azure                         | Coût estimé par mois                                        | Description                                                                         |
+| ------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Azure Kubernetes Service (AKS) (DEV)  | 50-80 € mensuels                                            | Faible utilisation pour l'environnement de DEV. 1 à 2 noeuds, basé sur Standard_B2s |
+| Azure Kubernetes Service (AKS) (PROD) | 200-300 € mensuels. Jusqu'à 1000 € en fonction de la charge | Environnement de production avec 3 à 5 noeuds, basé sur Standard_D4s_v4             |
+| Azure Key Vault                       | 10-20 € mensuels                                            | Coût pour le stockage des secrets et utilisation                                    |
+| Azure Storage Account                 | 5-10 € mensuels                                             | Coût pour le stockage des états Terraform                                           |
+| Azure container Registry (ACR)        | 20 € mensuels                                               | Coût pour le stockage des images Docker basé sur ACR Standard                       |
+| Azure DNS Zone                        | 5-10 € mensuels                                             | Coût pour la gestion des zones DNS                                                  |
+| Total estimé                          | 507 € mensuels                                              | Total moyen estimé. Peut évoluer en fonction de la charge                           |
+
+## Estimation du coût de build et de déploiement
+
+| Fonction         | TJM   | Description                                                                                             |
+| ---------------- | ----- | ------------------------------------------------------------------------------------------------------- |
+| Ingénieur DevOps | 650 € | Mise en place de l'infrastructure, configuration des outils DevOps, déploiement des services Kubernetes |
+| Chef de Projet   | 800 € | Coordination du projet, gestion des ressources, suivi de l'avancement                                   |
+
+L'équipe actuelle se compose de 3 ingénieurs DevOps, avec un taux journalier moyen (TJM) de 650 € pour les ingénieurs et 800 € pour le chef de projet. Le coût total de mise en œuvre est estimé à environ 30 jours homme, répartis sur 2 mois, soit un coût total de 20 625 € pour la mise en place initiale de la plateforme.
+
+- Nombre d'ingénieurs DevOps = 3
+- TJM ingénieur DevOps = 650 €
+- Nombre de chefs de projet = 1
+- TJM chef de projet = 800 €
+- Nombre total de jours homme = 30
+
+### Répartition des jours
+
+- Jours par personne = $\frac{30}{3 + 1} = 7{,}5$
+
+### Calcul du coût pour les ingénieurs DevOps
+
+- Coût DevOps = $3 \times 650 \times 7{,}5 = 14,625,€$
+
+### Calcul du coût pour le chef de projet
+
+- Coût Chef de projet = $1 \times 800 \times 7{,}5 = 6,000,€$
+
+### Calcul du coût total
+
+- Coût total = $14,625 + 6,000 = 20,625,€$
+
+## Estimation des coûts de maintenance
+
+Afin de garantir la pérennité de la plateforme AudioProthèse+, il est nécessaire de prévoir un budget de maintenance et d'amélioration continue. Ce budget inclut :
+
+- La mise à jour régulière des services et des outils
+- La surveillance et la gestion des incidents
+- La formation continue de l'équipe sur les nouvelles technologies et les meilleures pratiques DevOps
+- L'amélioration continue de la sécurité et de la performance de la plateforme
+- La gestion des incidents et des problèmes de production
+
+A la livraison, une équipe de 3 ingénieurs DevOps sera dédiée à la maintenance de la plateforme, avec un budget mensuel estimé à 19 500 € pour les salaires et les charges sociales. Ce budget peut évoluer en fonction des besoins et des évolutions de la plateforme.
+
+### Détail des calculs
+
+- Nombre d'ingénieurs DevOps dédiés à la maintenance : 3
+- Salaire brut annuel moyen par ingénieur DevOps : 55 000 €
+- Taux de charge patronales estimés : 42 %
+
+#### Calcul du salaire brut mensuel par ingénieur DevOps
+
+- Salaire brut mensuel par ingénieur = $3 \times 55,000 = 165,000,€$
+
+#### Charges patronales (environ 42 % du brut, estimation réaliste pour 2025)
+
+- Taux de charges patronales} $\approx 42\%$
+- Charges patronales mensuelles par ingénieur =  $165,000 \times 0,42 = 69,300,€$
+
+#### Coût total mensuel employeur par ingénieur DevOps
+
+Coût total mensuel par ingénieur = $\frac{234,300}{12} \approx 19,525,€$
+
+#### Coût total annuel pour l'équipe de maintenance
+
+Coût total mensuel équipe = $\frac{234,300}{3} = 78,100,€$
+
+## Total estimé
+
+### Total de mise en œuvre initiale
+
+Le coût total de mise en œuvre initiale de la plateforme AudioProthèse+ est estimé à 20 625 €, incluant les coûts de configuration, de déploiement et de formation de l'équipe.
+
+### Total de maintenance annuelle
+
+Les charges salariales pour l'équipe sont estimés à 78 100 € par an. A cela s'ajoute les coûts de fonctionnement de la plateforme, estimés à 6 084 € par an (507 € par mois).
+
+**Chiffrage annuel de maintenance = 78 100 € + 6 084 € = 84 184 €**
+
 # Mise en oeuvre et déploiement
 
 Cette section décrit les étapes de mise en œuvre et de déploiement de la plateforme AudioProthèse+. Elle détaille les processus d'industrialisation, de configuration et de déploiement des différents composants de l'architecture technique.
